@@ -115,6 +115,27 @@ If you want to directly reproduce our results in our work,
   year={2019}
 }
 ```
+```
+@article{DBLP:journals/corr/SelvarajuDVCPB16,
+	author    = {Ramprasaath R. Selvaraju and
+	Abhishek Das and
+	Ramakrishna Vedantam and
+	Michael Cogswell and
+	Devi Parikh and
+	Dhruv Batra},
+	title     = {Grad-CAM: Why did you say that? Visual Explanations from Deep Networks
+	via Gradient-based Localization},
+	journal   = {CoRR},
+	volume    = {abs/1610.02391},
+	year      = {2016},
+	url       = {http://arxiv.org/abs/1610.02391},
+	archivePrefix = {arXiv},
+	eprint    = {1610.02391},
+	timestamp = {Mon, 13 Aug 2018 16:46:58 +0200},
+	biburl    = {https://dblp.org/rec/journals/corr/SelvarajuDVCPB16.bib},
+	bibsource = {dblp computer science bibliography, https://dblp.org}
+}
+```
 
     
 
