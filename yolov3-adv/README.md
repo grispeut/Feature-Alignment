@@ -38,8 +38,6 @@ Please prepare dataset under the **data** directory
 * Training YOLO-V3 using KDFA+SSFA on COCO can be done as follows:
   ```
   python train.py --data data/coco.data --cfg cfg/yolov3.cfg  --weights weights/coco_pretrained.weights --bs 64 --epochs 15 --adv --kdfa --ssfa --kdfa_weights weights/coco_pretrained.weights
-
-
   ```
 
 ## Test
