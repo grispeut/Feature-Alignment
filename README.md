@@ -13,9 +13,9 @@ git clone https://github.com/grispeut/Feature-Alignment.git
 
 ## YOLO-V3
 
-Follow the README in [yolov3-adv](https://github.com/grispeut/Feature-Alignment/yolov3-adv/README.md) to reproduce our experiments.
+Follow the README in [yolov3-adv](https://github.com/grispeut/Feature-Alignment/tree/main/yolov3-adv) to reproduce our experiments.
 
 
 ## FASTER-RCNN-FPN
 
-Follow the README in [faster-rcnn-fpn-adv](https://github.com/grispeut/Feature-Alignment/faster-rcnn-fpn-adv/README.md) to reproduce our experiments.
+Follow the README in [faster-rcnn-fpn-adv](https://github.com/grispeut/Feature-Alignment/tree/main/faster-rcnn-fpn-adv) to reproduce our experiments.
