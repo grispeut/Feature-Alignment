@@ -55,7 +55,7 @@ class PGD(nn.Module):
                 eta = step_size * torch.sign(x_grad)
 
             x.data = x.data + eta
-            x.date = torch.min(torch.max(x.data, input_img - self.epsilon), input_img + self.epsilon)
+            x.data = torch.min(torch.max(x.data, input_img - self.epsilon), input_img + self.epsilon)
             x.data = torch.clamp(x.data, 0, 1)
 
         return x.detach(), ssfa_out.detach(), loss_clean
