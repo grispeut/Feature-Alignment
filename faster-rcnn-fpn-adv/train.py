@@ -54,7 +54,7 @@ def parse_args():
     parser.add_argument('--beta', type=float, default=1., help='weight for kdfa')
     parser.add_argument('--gamma', type=float, default=1., help='weight for ssfa')
     parser.add_argument('--kdfa_weights', type=str, default='weights/voc_pretrained.npy')
-    parser.add_argument('--tod', default=True, action="store_true", help='using task oriented domain')
+    parser.add_argument('--tod', default=False, action="store_true", help='using task oriented domain')
 
     # config optimization
     parser.add_argument('--o', type=str, default="sgd", dest='optimizer', help='training optimizer', )
