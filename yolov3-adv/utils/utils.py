@@ -380,9 +380,10 @@ def compute_loss(p, targets, model):  # predictions, targets, model
     return loss, torch.cat((lbox, lobj, lcls, loss)).detach()
 
 
-def compute_adv_loss(p, targets, model, domain_attack=False, domain='loc'):  # predictions, targets, model
+def compute_adv_loss(p, targets, model, domain_attack=False, domain='loc',
+                     mul_task=False):  # predictions, targets, model
     ft = torch.cuda.FloatTensor if p[0].is_cuda else torch.Tensor
-    lcls, lbox, lobj, lobj_neg = ft([0]), ft([0]), ft([0]), ft([0])
+    lcls, lbox, lobj = ft([0]), ft([0]), ft([0])
     tcls, tbox, indices, anchor_vec = build_targets(model, targets)
     h = model.hyp  # hyperparameters
     arc = model.arc  # # (default, uCE, uBCE) detection architectures
@@ -414,47 +415,37 @@ def compute_adv_loss(p, targets, model, domain_attack=False, domain='loc'):  # p
                 t[range(nb), tcls[i]] = 1.0
                 lcls += BCEcls(ps[:, 5:], t)  # BCE
 
-        tobj_neg = torch.zeros_like(pi[..., 0])
         if 'default' in arc:  # separate obj and cls
             lobj += BCEobj(pi[..., 4], tobj)  # obj loss
-            lobj_neg += BCEobj(pi[..., 4], tobj_neg)
-
 
     if not domain_attack:
         lbox *= h['giou']
         lobj *= h['obj']
         lcls *= h['cls']
-        lobj_neg *= 0.
+        if mul_task:
+            return lbox, lobj + lcls
     else:
         if domain == 'loc':
             lbox *= h['giou']
             lobj *= 0.
             lcls *= 0.
-            lobj_neg *= 0.
         elif domain == 'clsobj':
             lbox *= 0.
             lobj *= h['obj']
             lcls *= h['cls']
-            lobj_neg *= 0.
         elif domain == 'cls':
             lbox *= 0.
             lobj *= 0.
             lcls *= h['cls']
-            lobj_neg *= 0
         elif domain == 'obj':
             lbox *= 0.
             lobj *= h['obj']
             lcls *= 0.
-            lobj_neg *= 0.
-        elif domain == 'obj_neg':
-            lbox *= 0.
-            lobj *= 0.
-            lcls *= 0.
-            lobj_neg *= -1.
+
     # lbox *= 0.
     # lobj *= 0.
     # lcls *= 0.
-    loss = lbox + lobj + lcls + lobj_neg
+    loss = lbox + lobj + lcls
     return loss, torch.cat((lbox, lobj, lcls, loss)).detach()
 
 def build_targets(model, targets):
