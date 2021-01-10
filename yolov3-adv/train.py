@@ -30,6 +30,7 @@ def train():
     beta = args.beta
     gamma = args.gamma
     kdfa_weights = args.kdfa_weights
+    tod = args.tod
     kdfa_cfg = cfg
 
     img_size = 416
@@ -168,26 +169,35 @@ def train():
                     imgs = F.interpolate(imgs, size=ns, mode='bilinear', align_corners=False)
 
             if adv:
-                imgs_adv, ssfa_out, loss_clean = model_adv.adv_sample_train(imgs, targets, step_size=step_size,
-                                                                              all_bp=True, sf=imgs_weight*scale_factor, num_steps=num_steps)
+                if tod:
+                    imgs_adv, loss_clean = model_adv.adv_sample_train_tod(imgs, targets, step_size=step_size,
+                                                                          num_steps=num_steps,
+                                                                          all_bp=True, sf=imgs_weight * scale_factor)
 
-                pred, fa_out = model(imgs_adv, fa=True)
-                fa_out_norm = F.normalize(fa_out, dim=1)
-                loss_adv, loss_items = compute_loss(pred, targets, model)
-                loss_adv *= (1 - imgs_weight)
+                    pred = model(imgs_adv, fa=False)
+                    loss_adv, loss_items = compute_loss(pred, targets, model)
+                    loss_adv *= (1 - imgs_weight)
 
-                if kdfa:
-                    kdfa_out = model_t(imgs, fa=True, only_fa=True)
-                    kdfa_out_norm = F.normalize(kdfa_out, dim=1)
-                    kd_sim = torch.einsum('nc,nc->n', [fa_out_norm, kdfa_out_norm])
-                    kd_sim.data.clamp_(-1., 1.)
-                    loss_kd = (1. - kd_sim).mean().view(-1) * beta
+                else:
+                    imgs_adv, ssfa_out, loss_clean = model_adv.adv_sample_train(imgs, targets, step_size=step_size,
+                                                                                  all_bp=True, sf=imgs_weight*scale_factor, num_steps=num_steps)
+                    pred, fa_out = model(imgs_adv, fa=True)
+                    fa_out_norm = F.normalize(fa_out, dim=1)
+                    loss_adv, loss_items = compute_loss(pred, targets, model)
+                    loss_adv *= (1 - imgs_weight)
 
-                if ssfa:
-                    ssfa_out_norm = F.normalize(ssfa_out, dim=1)
-                    ss_sim = torch.einsum('nc,nc->n', [fa_out_norm, ssfa_out_norm])
-                    ss_sim.data.clamp_(-1., 1.)
-                    loss_ss = (1-ss_sim).mean().view(-1) * gamma
+                    if kdfa:
+                        kdfa_out = model_t(imgs, fa=True, only_fa=True)
+                        kdfa_out_norm = F.normalize(kdfa_out, dim=1)
+                        kd_sim = torch.einsum('nc,nc->n', [fa_out_norm, kdfa_out_norm])
+                        kd_sim.data.clamp_(-1., 1.)
+                        loss_kd = (1. - kd_sim).mean().view(-1) * beta
+
+                    if ssfa:
+                        ssfa_out_norm = F.normalize(ssfa_out, dim=1)
+                        ss_sim = torch.einsum('nc,nc->n', [fa_out_norm, ssfa_out_norm])
+                        ss_sim.data.clamp_(-1., 1.)
+                        loss_ss = (1-ss_sim).mean().view(-1) * gamma
             else:
                 pred = model(imgs, fa=False)
                 loss_adv, loss_items = compute_loss(pred, targets, model)
@@ -261,6 +271,7 @@ if __name__ == '__main__':
     parser.add_argument('--beta', type=float, default=10., help='weight for kdfa')
     parser.add_argument('--gamma', type=float, default=10., help='weight for ssfa')
     parser.add_argument('--kdfa_weights', type=str, default='weights/voc_pretrained.weights')
+    parser.add_argument('--tod', default=False, action="store_true", help='using task oriented domain')
 
     args = parser.parse_args()
     print(args)
