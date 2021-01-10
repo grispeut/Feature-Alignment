@@ -54,6 +54,7 @@ def parse_args():
     parser.add_argument('--beta', type=float, default=1., help='weight for kdfa')
     parser.add_argument('--gamma', type=float, default=1., help='weight for ssfa')
     parser.add_argument('--kdfa_weights', type=str, default='weights/voc_pretrained.npy')
+    parser.add_argument('--tod', default=True, action="store_true", help='using task oriented domain')
 
     # config optimization
     parser.add_argument('--o', type=str, default="sgd", dest='optimizer', help='training optimizer', )
@@ -115,6 +116,7 @@ if __name__ == '__main__':
     beta = args.beta
     gamma = args.gamma
     kdfa_weights = args.kdfa_weights
+    tod = args.tod
 
     tb_writer = SummaryWriter()
 
@@ -258,27 +260,41 @@ if __name__ == '__main__':
                 gt_boxes.resize_(data[2].size()).copy_(data[2])
                 num_boxes.resize_(data[3].size()).copy_(data[3])
             if adv:
-                im_adv, loss_clean, ssfa_out = model_adv.adv_sample_train(im_data, im_info, gt_boxes, num_boxes,
-                                                                               step_size=step_size,
-                                                                               num_steps=num_steps, all_bp=True, sf=imgs_weight)
-                rois, cls_prob, bbox_pred, \
-                rpn_loss_cls, rpn_loss_box, \
-                RCNN_loss_cls, RCNN_loss_bbox, \
-                rois_label, fa_out = model(im_adv, im_info, gt_boxes, num_boxes, fa=True)
-                fa_out_norm = F.normalize(fa_out, dim=1)
-                if kdfa:
-                    kdfa_out = model_t(im_data, im_info, gt_boxes, num_boxes, fa=True, only_fa=True)
-                    kdfa_out_norm = F.normalize(kdfa_out, dim=1)
-                    kd_sim = torch.einsum('nc,nc->n', [fa_out_norm, kdfa_out_norm])
-                    kd_sim.data.clamp_(-1., 1.)
-                    loss_kd = (1. - kd_sim).mean().view(-1) * beta
-                if ssfa:
-                    ssfa_out_norm = F.normalize(ssfa_out, dim=1)
-                    ss_sim = torch.einsum('nc,nc->n', [fa_out_norm, ssfa_out_norm])
-                    ss_sim.data.clamp_(-1., 1.)
-                    loss_ss = (1 - ss_sim).mean().view(-1) * gamma
+                if tod:
+                    im_adv, loss_clean = model_adv.adv_sample_train_tod(im_data, im_info, gt_boxes, num_boxes,
+                                                                        num_steps=num_steps,
+                                                                        step_size=step_size, all_bp=True,
+                                                                        sf=imgs_weight)
 
-                loss_adv = ((rpn_loss_cls.mean() + rpn_loss_box.mean() + RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()) * (1-imgs_weight)).view(-1)
+                    rois, cls_prob, bbox_pred, \
+                    rpn_loss_cls, rpn_loss_box, \
+                    RCNN_loss_cls, RCNN_loss_bbox, \
+                    rois_label = model(im_adv, im_info, gt_boxes, num_boxes, fa=False)
+                    loss_adv = ((rpn_loss_cls.mean() + rpn_loss_box.mean() + RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()) * (
+                                            1 - imgs_weight)).view(-1)
+
+                else:
+                    im_adv, loss_clean, ssfa_out = model_adv.adv_sample_train(im_data, im_info, gt_boxes, num_boxes,
+                                                                                   step_size=step_size,
+                                                                                   num_steps=num_steps, all_bp=True, sf=imgs_weight)
+                    rois, cls_prob, bbox_pred, \
+                    rpn_loss_cls, rpn_loss_box, \
+                    RCNN_loss_cls, RCNN_loss_bbox, \
+                    rois_label, fa_out = model(im_adv, im_info, gt_boxes, num_boxes, fa=True)
+                    fa_out_norm = F.normalize(fa_out, dim=1)
+                    if kdfa:
+                        kdfa_out = model_t(im_data, im_info, gt_boxes, num_boxes, fa=True, only_fa=True)
+                        kdfa_out_norm = F.normalize(kdfa_out, dim=1)
+                        kd_sim = torch.einsum('nc,nc->n', [fa_out_norm, kdfa_out_norm])
+                        kd_sim.data.clamp_(-1., 1.)
+                        loss_kd = (1. - kd_sim).mean().view(-1) * beta
+                    if ssfa:
+                        ssfa_out_norm = F.normalize(ssfa_out, dim=1)
+                        ss_sim = torch.einsum('nc,nc->n', [fa_out_norm, ssfa_out_norm])
+                        ss_sim.data.clamp_(-1., 1.)
+                        loss_ss = (1 - ss_sim).mean().view(-1) * gamma
+
+                    loss_adv = ((rpn_loss_cls.mean() + rpn_loss_box.mean() + RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()) * (1-imgs_weight)).view(-1)
 
             else:
                 rois, cls_prob, bbox_pred, \
@@ -287,7 +303,6 @@ if __name__ == '__main__':
                 rois_label = model(im_data, im_info, gt_boxes, num_boxes)
 
                 loss_adv = (rpn_loss_cls + rpn_loss_box + RCNN_loss_cls + RCNN_loss_bbox).view(-1)
-
             loss_items = torch.cat((loss_clean, loss_adv, loss_kd, loss_ss,
                                     (loss_clean + loss_adv + loss_kd + loss_ss))).detach()
             if torch.isnan(loss_adv):
